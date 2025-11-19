@@ -1,4 +1,4 @@
-// 1. CARGA DE VARIABLES DE ENTORNO
+ // 1. CARGA DE VARIABLES DE ENTORNO
 require('dotenv').config({ path: './credenciales.env' }); 
 
 // 2. IMPORTACIÓN DE LIBRERÍAS
@@ -15,7 +15,6 @@ const app = express();
 
 // Configuración de MySQL
 const dbConfig = {
-    // Usar las variables de Render
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
@@ -35,31 +34,36 @@ let pool;
         conn.release();
         console.log('Conexión a MySQL OK');
     } catch (err) {
+        // Este error puede indicar que Render no tiene las variables de DB correctas.
         console.error('Error conectando a MySQL:', err.message || err);
     }
 })();
 
-// servidor.js (Comenzando aproximadamente en la línea 42)
+// 🚨 CORRECCIÓN CORS DEFINITIVA Y SIN ERRORES DE SINTAXIS 🚨
+// Incluimos la URL de Vercel desde la variable de entorno
+const VERCEL_FRONTEND = process.env.FRONTEND_URL;
 
-// 🚨 CORRECCIÓN CORS: Permitir localhost Y el dominio de Vercel 🚨
 const ALLOWED_ORIGINS = [
-    'http://localhost:80', // Puerto 80 default
-    'http://localhost:3000', // Puerto de desarrollo Node
+    'http://localhost:80',
+    'http://localhost:3000',
     'http://127.0.0.1:80',
     'http://127.0.0.1:3000',
-    process.env.FRONTEND_URL, // <-- Lee la URL de Vercel desde las Variables de Entorno de Render
 ];
+
+if (VERCEL_FRONTEND) {
+    ALLOWED_ORIGINS.push(VERCEL_FRONTEND); // Añade el dominio de Vercel si existe
+}
 
 app.use(cors({ 
     origin: (origin, callback) => {
         // Permitir peticiones sin origen (ej: Postman, Render mismo)
         if (!origin) return callback(null, true); 
         
-        // 1. Comprobar si el origen está en la lista de permitidos
+        // 1. Verificar si el origen está en nuestra lista (incluyendo Vercel y localhost)
         if (ALLOWED_ORIGINS.includes(origin)) {
             callback(null, true);
         } else {
-            // 2. Comprobar si es un subdominio de localhost (para mayor seguridad en desarrollo)
+            // 2. Comprobar si es un subdominio de localhost (para mayor flexibilidad local)
             if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
                  callback(null, true);
             } else {
@@ -77,16 +81,6 @@ app.set('trust proxy', 1); // Necesario para que Render maneje las cookies corre
 app.use(express.json()); // Middleware para parsear el cuerpo JSON de la solicitud
 
 // Sesiones (para login simple)
-// ... (continúa con la configuración de la sesión)
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true,
-    allowedHeaders: ['Content-Type']
-}));
-
-app.set('trust proxy', 1); // Necesario para que Render maneje las cookies correctamente (proxies)
-app.use(express.json()); // Middleware para parsear el cuerpo JSON de la solicitud
-
-// Sesiones (para login simple)
 app.use(session({
     secret: process.env.SESSION_SECRET || 'dev-secret-change',
     resave: false,
@@ -95,13 +89,12 @@ app.use(session({
         // 🚨 CONFIGURACIÓN DE COOKIES PARA DESPLIEGUE EN RENDER
         secure: process.env.NODE_ENV === 'production', // true en producción (https), false en local (http)
         httpOnly: true,          
-        // sameSite: 'none' es vital para cookies cross-site en HTTPS
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', 
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' es vital para cookies cross-site en HTTPS
         maxAge: 24 * 60 * 60 * 1000  
     }
 }));
 
-// Logging simple de cada petición para debugging (CORREGIDO)
+// Logging simple de cada petición para debugging
 app.use(function(req, res, next) {
     try {
         console.log(new Date().toISOString(), req.method, req.url, 'Session:', req.session.userId || 'Guest');
