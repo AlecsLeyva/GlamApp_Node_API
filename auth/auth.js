@@ -1,7 +1,7 @@
 // auth.js - Lógica de Autenticación para Glam App
 (function(){
     // La URL base del servidor backend (Node/Express, etc.)
-    const BACKEND_URL = 'http://localhost:3000';
+    const BACKEND_URL = 'https://glamapp-node-api.onrender.com';
     
     // ⚠️ CORRECCIÓN DE RUTA: admin.html está en el mismo directorio 'auth'
     const ADMIN_PAGE = './admin.html'; 
