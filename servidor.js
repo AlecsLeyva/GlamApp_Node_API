@@ -15,7 +15,7 @@ const app = express();
 
 // Configuración de MySQL
 const dbConfig = {
-    // Usar la variable de entorno 'MYSQL_URL' para Render si existe, o las individuales
+    // Usar las variables de Render
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
@@ -39,25 +39,32 @@ let pool;
     }
 })();
 
-// 🚨 CORRECCIÓN CORS: Permitir localhost Y el dominio de Vercel 🚨
+// 🚨 CORRECCIÓN CORS DEFINITIVA: Usar FRONTEND_URL de Render 🚨
+// El origen permitido es el dominio de Vercel (leído desde la variable de entorno de Render)
 const ALLOWED_ORIGINS = [
-    'http://localhost:80', // Puerto 80 default
-    'http://localhost:3000', // Puerto de desarrollo Node
-    'https://glam-app-node-dwhqc2zror-alecsdesus-projects.vercel.app', // Dominio de Vercel
-    // Añadir otras combinaciones de localhost si las usas (ej: http://127.0.0.1:80)
+    'http://localhost:80',
+    'http://localhost:3000',
+    process.env.FRONTEND_URL, // <--- ESTE VALOR DEBE ESTAR EN LAS VARIABLES DE ENTORNO DE RENDER
+    'http://127.0.0.1:80',
+    'http://127.0.0.1:3000',
 ];
 
 app.use(cors({ 
     origin: (origin, callback) => {
-        // Permitir peticiones sin origen (como clientes REST locales o peticiones directas)
-        if (!origin) return callback(null, true); 
+        // Permitir peticiones sin origen (ej: Postman, Render mismo)
+        if (!origin) return callback(null, true); 
         
-        // Comprobar si el origen está en la lista de permitidos o es localhost
-        if (ALLOWED_ORIGINS.includes(origin) || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        // 1. Comprobar si el origen está en la lista de permitidos
+        if (ALLOWED_ORIGINS.includes(origin)) {
             callback(null, true);
         } else {
-            console.error(`CORS Blocked: ${origin}`);
-            callback(new Error('Not allowed by CORS'));
+            // 2. Comprobar si es un subdominio de localhost para desarrollo (más flexible)
+            if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+                 callback(null, true);
+            } else {
+                console.error(`CORS Blocked: ${origin}. Origen no permitido.`);
+                callback(new Error('Not allowed by CORS'));
+            }
         }
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -77,12 +84,13 @@ app.use(session({
         // 🚨 CONFIGURACIÓN DE COOKIES PARA DESPLIEGUE EN RENDER
         secure: process.env.NODE_ENV === 'production', // true en producción (https), false en local (http)
         httpOnly: true,          
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' es NECESARIO para CORS cross-site en producción
+        // sameSite: 'none' es vital para cookies cross-site en HTTPS
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', 
         maxAge: 24 * 60 * 60 * 1000  
     }
 }));
 
-// Logging simple de cada petición para debugging
+// Logging simple de cada petición para debugging (CORREGIDO)
 app.use(function(req, res, next) {
     try {
         console.log(new Date().toISOString(), req.method, req.url, 'Session:', req.session.userId || 'Guest');
@@ -196,18 +204,12 @@ app.post('/api/login', async (req, res) => {
         console.log('Sesión guardada - userId:', user.id, 'userName:', user.name, 'isAdmin:', isAdminValue);
          
         // *********************************************************************************
-        // CAMBIO: Incluir la redirección en la respuesta si es administrador
         const responseBody = { 
             id: user.id, 
             name: user.name, 
             email: user.email, 
             is_admin: isAdminValue === 1 
         };
-
-        // El frontend ya maneja la redirección a admin.html
-        // if (isAdminValue === 1) {
-        //     responseBody.redirect = 'admin.html';
-        // }
 
         res.json(responseBody);
         // *********************************************************************************
@@ -336,7 +338,6 @@ app.delete('/api/products/:id', requireSession, async (req, res) => {
 
 
 // 8. INICIO DEL SERVIDOR
-// 🚨 CAMBIO: Usar PORT del entorno para Render
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor escuchando en puerto: ${PORT}`);
