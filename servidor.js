@@ -39,14 +39,15 @@ let pool;
     }
 })();
 
-// 🚨 CORRECCIÓN CORS DEFINITIVA: Usar FRONTEND_URL de Render 🚨
-// El origen permitido es el dominio de Vercel (leído desde la variable de entorno de Render)
+// servidor.js (Comenzando aproximadamente en la línea 42)
+
+// 🚨 CORRECCIÓN CORS: Permitir localhost Y el dominio de Vercel 🚨
 const ALLOWED_ORIGINS = [
-    'http://localhost:80',
-    'http://localhost:3000',
-    process.env.FRONTEND_URL, // <--- ESTE VALOR DEBE ESTAR EN LAS VARIABLES DE ENTORNO DE RENDER
+    'http://localhost:80', // Puerto 80 default
+    'http://localhost:3000', // Puerto de desarrollo Node
     'http://127.0.0.1:80',
     'http://127.0.0.1:3000',
+    process.env.FRONTEND_URL, // <-- Lee la URL de Vercel desde las Variables de Entorno de Render
 ];
 
 app.use(cors({ 
@@ -58,7 +59,7 @@ app.use(cors({ 
         if (ALLOWED_ORIGINS.includes(origin)) {
             callback(null, true);
         } else {
-            // 2. Comprobar si es un subdominio de localhost para desarrollo (más flexible)
+            // 2. Comprobar si es un subdominio de localhost (para mayor seguridad en desarrollo)
             if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
                  callback(null, true);
             } else {
@@ -67,6 +68,16 @@ app.use(cors({ 
             }
         }
     },
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true,
+    allowedHeaders: ['Content-Type']
+}));
+
+app.set('trust proxy', 1); // Necesario para que Render maneje las cookies correctamente (proxies)
+app.use(express.json()); // Middleware para parsear el cuerpo JSON de la solicitud
+
+// Sesiones (para login simple)
+// ... (continúa con la configuración de la sesión)
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true,
     allowedHeaders: ['Content-Type']
