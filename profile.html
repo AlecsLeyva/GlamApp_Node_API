@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Perfil - Glam App</title>
+<style>
+    body {
+        font-family: 'Open Sans', sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #fce4ec; 
+        color: #4a4a4a;
+    }
+
+    nav {
+        background-color: #f06292; 
+        padding: 15px 0;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+
+    nav a {
+        font-family: 'Open Sans', sans-serif;
+        color: white;
+        text-decoration: none;
+        font-weight: 600;
+        margin: 0 25px;
+        font-size: 1.1em;
+    }
+
+    .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .profile-section {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .profile-header {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .profile-pic {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .profile-info h2 {
+        margin: 0;
+        color: #880e4f;
+    }
+
+    .sms-form {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 5px;
+        color: #880e4f;
+    }
+
+    input[type="text"] {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+
+    button {
+        background: #f06292;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #ec407a;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    #resultado {
+        margin-top: 15px;
+        padding: 10px;
+        border-radius: 4px;
+    }
+
+    .success {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .error {
+        background: #ffebee;
+        color: #c62828;
+    }
+
+    .logout-btn {
+        background: #888;
+        margin-left: 10px;
+    }       
+</style>
+</head>
+<body>
+    <nav>
+        <a href="ProyectoUni2APIS.html">💄 Productos</a>
+        <a href="cart.html">🛍️ Carrito</a>
+        <a href="profile.html">👤 Perfil</a>
+    </nav>
+
+    <!-- Mixed-content warning banner (se mostrará si la página se sirve por HTTPS y el backend es HTTP) -->
+    <div id="mixed-content-banner" style="display:none; background:#fff3f3; border:1px solid #f8c1c1; color:#7a0a2a; padding:12px; margin:16px auto; max-width:900px; border-radius:6px; text-align:left; font-weight:600;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+            <div>
+                ⚠️ Atención: estás navegando por HTTPS. Las peticiones a <code>http://localhost:3000</code> pueden ser bloqueadas por el navegador (mixed content).
+                Para pruebas locales, abre la versión HTTP de la página o configura el backend en HTTPS.
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <button id="open-http-btn" style="background:#f06292;color:white;border:none;padding:8px 10px;border-radius:4px;cursor:pointer;">Abrir versión HTTP</button>
+                <button id="dismiss-banner" style="background:#888;color:white;border:none;padding:8px 10px;border-radius:4px;cursor:pointer;">Cerrar</button>
+            </div>
+        </div>
+        <div style="font-weight:400; margin-top:8px; font-size:0.95em; color:#5b2630">Opciones: 1) Usar http://localhost/... para desarrollo; 2) configurar Node (servidor) para HTTPS y usar https://localhost:3000; 3) habilitar temporalmente contenido mixto en el navegador (no recomendado).</div>
+    </div>
+
+    <div class="container">
+        <div class="profile-section">
+            <div id="login-section">
+                <h2>Iniciar sesión</h2>
+                <div id="g_id_onload"
+                    data-client_id="974836071359-iutk3d5811297521tl5p1cg3no75ve4a.apps.googleusercontent.com"
+                    data-context="signin"
+                    data-ux_mode="popup"
+                    data-callback="handleCredentialResponse">
+                </div>
+                <div class="g_id_signin" data-type="standard"></div>
+            </div>
+
+            <div id="profile-info" class="hidden">
+                <div class="profile-header">
+                    <img id="profile-pic" class="profile-pic" src="" alt="Foto de perfil">
+                    <div class="profile-info">
+                        <h2 id="profile-name"></h2>
+                        <button onclick="logout()" class="logout-btn">Cerrar sesión</button>
+                    </div>
+                </div>
+
+                <div class="sms-form">
+                    <h3>Enviar SMS</h3>
+                    <form id="sms-form">
+                        <div class="form-group">
+                            <label for="numero">Número de Destino:</label>
+                            <input type="text" id="numero" value="+56967803778" required><br><br>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="mensaje">Mensaje:</label>
+                            <input type="text" id="mensaje" value="Mensaje de prueba desde la web." required><br><br>
+                        </div>
+                        
+                        <button type="submit">Enviar SMS con Twilio</button>
+                    </form>
+                    <p id="resultado"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Detectar mixed-content (página en https pero backend en http) y mostrar banner
+        (function(){
+            try {
+                var isSecure = window.location.protocol === 'https:';
+                var banner = document.getElementById('mixed-content-banner');
+                var smsForm = document.getElementById('sms-form');
+                var openBtn = document.getElementById('open-http-btn');
+                var dismiss = document.getElementById('dismiss-banner');
+                if (isSecure) {
+                    // Mostrar el banner
+                    if (banner) banner.style.display = 'block';
+                    // Deshabilitar envío de SMS para evitar llamadas bloqueadas
+                    if (smsForm) {
+                        var submitButtons = smsForm.querySelectorAll('button[type="submit"]');
+                        for (var i=0;i<submitButtons.length;i++){ submitButtons[i].disabled = true; submitButtons[i].title = 'Deshabilitado en HTTPS; abre la versión HTTP para pruebas.'; }
+                        // evitar submit por si acaso
+                        smsForm.addEventListener('submit', function(e){ e.preventDefault(); alert('Envio bloqueado por mixed-content. Abre la versión HTTP para probar.'); });
+                    }
+                }
+                if (openBtn) {
+                    openBtn.addEventListener('click', function(){
+                        try {
+                            var httpUrl = window.location.href.replace(/^https:/i, 'http:');
+                            window.open(httpUrl, '_blank');
+                        } catch(e) { console.warn('No se pudo abrir HTTP', e); }
+                    });
+                }
+                if (dismiss) {
+                    dismiss.addEventListener('click', function(){ if (banner) banner.style.display = 'none'; });
+                }
+            } catch (err) { console.warn('mixed-content banner error', err); }
+        })();
+    </script>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+        function handleCredentialResponse(response) {
+            console.log("JWT recibido:", response.credential);
+            const data = parseJwt(response.credential);
+            
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('profile-info').classList.remove('hidden');
+            
+            document.getElementById('profile-pic').src = data.picture;
+            document.getElementById('profile-name').textContent = data.name;
+        }
+
+        function parseJwt(token) {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            return JSON.parse(window.atob(base64));
+        }
+
+        function logout() {
+            // Limpiar estado visual local
+            document.getElementById('login-section').classList.remove('hidden');
+            document.getElementById('profile-info').classList.add('hidden');
+            document.getElementById('profile-pic').src = '';
+            document.getElementById('profile-name').textContent = '';
+            // Eliminar sesión local (demo) y redirigir al login local
+            try {
+                localStorage.removeItem('glamCurrentUser');
+            } catch (e) {
+                console.warn('No se pudo eliminar glamCurrentUser', e);
+            }
+            // Redirigir al login de la carpeta auth
+            window.location.href = 'auth/login.html';
+        }
+
+        // --- CORRECCIÓN CLAVE 1: DOMContentLoaded para resolver el error de 'null' ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const smsForm = document.getElementById('sms-form');
+            const resultado = document.getElementById('resultado'); // Usamos el ID 'resultado' de tu HTML
+
+            if (smsForm && resultado) {
+                smsForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const numero = document.getElementById('numero').value;
+                    const mensaje = document.getElementById('mensaje').value;
+                    
+                    resultado.textContent = 'Enviando...';
+                    resultado.className = ''; // Limpiar clases
+
+                    // --- CORRECCIÓN CLAVE 2: Usar el puerto 3000 de Node.js ---
+                    fetch('http://localhost:3000/enviar-sms', { 
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ to: numero, body: mensaje })
+                    })
+                    .then(function(response) {
+                        if (!response.ok) {
+                            // Si el servidor Node.js devuelve un error (ej. 500)
+                            // Lanzamos un error que será capturado por .catch
+                            return response.json().then(function(err) {
+                                throw new Error(err.message || ('Error HTTP: ' + response.status + '. Revisa la terminal de Node.'));
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(function(data) {
+                        resultado.textContent = data.message;
+                        resultado.classList.add('success');
+                    })
+                    .catch(function(error) {
+                        console.error('Error:', error);
+                        // Mostrar el mensaje de error del servidor si está disponible
+                        resultado.textContent = '❌ Error al enviar el SMS. ' + (error.message || 'Revisa la consola o la terminal.');
+                        resultado.classList.add('error');
+                    });
+                });
+            } else {
+                console.error("Error: Elemento 'sms-form' o 'resultado' no encontrado al cargar el DOM.");
+            }
+        });
+</script>
+</body>
+</html>

@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Glam App</title>
+    
+    <style>
+        :root{
+            /* Colores del Maquillaje */
+            --primary-red: #C62828;       /* Rojo Oscuro/Clásico */
+            --accent-pink: #FF4081;       /* Rosa Vibrante (Magenta) */
+            --text-dark: #333333;         
+            --text-muted: #888888;        
+            --bg-light: #FFFFFF;          
+            --bg-pink-soft: #FCE4EC;      /* Fondo Rosa muy Suave */
+            --bg-tab: #FFEBF2;            /* Fondo para pestañas (Rosa más pálido) */
+            --shadow-color: rgba(204, 0, 80, 0.15); 
+            --button-secondary: #AAAAAA;  /* Gris para acciones secundarias */
+        }
+        
+        /* Estilos Globales */
+        *{box-sizing:border-box}
+        body{
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: var(--bg-pink-soft); 
+            margin:0;
+            display:flex;
+            align-items:flex-start;
+            justify-content:center;
+            min-height: 100vh;
+            padding: 30px 16px;
+        }
+
+        /* Tarjeta principal (Admin Panel) */
+        .admin-panel {
+            background: var(--bg-light);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px var(--shadow-color);
+            width: 100%;
+            max-width: 1200px;
+            text-align: left;
+        }
+
+        .admin-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--bg-pink-soft);
+            margin-bottom: 20px;
+        }
+
+        .admin-header h2 {
+            color: var(--primary-red);
+            font-family: 'Playfair Display', serif;
+            font-size: 2em;
+            margin: 0;
+        }
+        
+        /* Pestañas */
+        .admin-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .admin-tab {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1.05em;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .admin-tab:hover {
+            color: var(--primary-red);
+            background-color: var(--bg-tab);
+        }
+
+        .admin-tab.active {
+            color: var(--accent-pink);
+            border-bottom: 3px solid var(--accent-pink);
+            background-color: var(--bg-light);
+        }
+        
+        /* Contenido General */
+        .admin-content h3 {
+            color: var(--text-dark);
+            font-size: 1.5em;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        
+        /* Inputs */
+        .admin-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .admin-row input[type="text"], .admin-row input[type="number"],
+        #product-form input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #FFCDD2;
+            transition: border-color 0.3s;
+            width: 100%;
+            margin-top: 5px;
+        }
+        
+        /* Tablas */
+        #products-table, #users-table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px !important;
+        }
+        #products-table th, #users-table th {
+            background-color: var(--primary-red);
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        #products-table td, #users-table td {
+            padding: 10px;
+            border: 1px solid #eee;
+        }
+        #products-table tr:nth-child(even), #users-table tr:nth-child(even) {
+            background-color: #fcfcfc;
+        }
+
+        /* Botones genéricos */
+        .btn {
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+            font-weight: 600;
+            transition: background-color 0.2s, opacity 0.2s;
+            text-decoration: none; /* Asegurar que no tenga subrayado */
+        }
+        .primary {
+            background: var(--accent-pink);
+            color: white;
+        }
+        .primary:hover {
+            opacity: 0.9;
+        }
+        .muted {
+            color: var(--text-muted);
+        }
+
+        /* Botones en la tabla */
+        #products-table button {
+            padding: 6px 10px;
+            margin-right: 5px;
+            font-size: 0.85em;
+            border-radius: 4px;
+            color: white;
+            border: none;
+        }
+        .edit { background-color: #2196f3; }
+        .save { background-color: #4caf50; }
+        .cancel { background-color: var(--button-secondary); }
+        .delete { background-color: var(--primary-red); }
+
+        /* Chart */
+        #stockChart {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+        hr { border: none; border-top: 1px solid #f06292; margin: 20px 0; }
+    </style>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
+    
+    <script src="auth-check.js"></script> 
+</head>
+<body>
+    <div class="admin-panel" id="admin-root">
+        <div class="admin-header">
+            <h2>Admin Dashboard</h2>
+            <div>
+                <button id="admin-logout" class="btn primary">Cerrar sesión</button>
+            </div>
+        </div>
+        <div class="admin-content" id="admin-content">
+            <p class="muted">Cargando panel de administración...</p>
+            <p id="admin-info" class="muted"></p>
+        </div>
+    </div>
+
+    <script>
+        const BACKEND_URL = "http://localhost:3000";
+
+        // 🚨 LLAMADA INMEDIATA DE SEGURIDAD LOCAL
+        window.requireAuth(); 
+
+        // ==============================================
+        // LÓGICA DE SEGURIDAD Y SESIÓN (SERVER SIDE)
+        // ==============================================
+        async function fetchUser() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/me`, { credentials: "include" });
+                if (!response.ok) {
+                    throw new Error("No autenticado");
+                }
+                const user = await response.json();
+                
+                if (!user.is_admin) {
+                    alert("Acceso denegado. Solo administradores pueden acceder.");
+                    window.location.href = "../ProyectoUni2APIS.html";
+                    return null;
+                }
+                
+                return user;
+            } catch (error) {
+                console.warn("Error al verificar sesión con /api/me:", error);
+                window.location.href = "login.html";
+                return null;
+            }
+        }
+
+        // Lógica de inicio
+        (async function () {
+            const user = await fetchUser();
+            if (!user) {
+                return;
+            }
+
+            document.getElementById("admin-info").textContent =
+                `Conectado como: ${user.name || user.email} (ADMIN)`;
+            renderProductManager();
+        })();
+
+        // Logout
+        document.getElementById("admin-logout").addEventListener("click", () => {
+            fetch(`${BACKEND_URL}/api/logout`, {
+                method: "POST",
+                credentials: "include"
+            }).finally(() => {
+                localStorage.removeItem("glamCurrentUser");
+                localStorage.removeItem("glamGoogleCredential");
+                window.location.href = "login.html";
+            });
+        });
+
+        // ==============================================
+        // FUNCIONES DEL PANEL DE ADMINISTRACIÓN
+        // ==============================================
+
+        function renderProductManager(){
+            const container = document.getElementById('admin-content');
+            if (!container) return;
+            container.innerHTML = `
+                <div class="admin-tabs">
+                    <button id="tab-productos" class="admin-tab active">Productos</button>
+                    <button id="tab-usuarios" class="admin-tab">Usuarios</button>
+                </div>
+                <div id="tab-content"></div>
+            `;
+            
+            document.getElementById('tab-productos').addEventListener('click', () => { showProductsTab(); setActiveTab('tab-productos'); });
+            document.getElementById('tab-usuarios').addEventListener('click', () => { showUsersTab(); setActiveTab('tab-usuarios'); });
+            
+            showProductsTab();
+        }
+
+        function setActiveTab(activeId) {
+            document.querySelectorAll('.admin-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(activeId).classList.add('active');
+        }
+
+        async function showProductsTab(){
+            setActiveTab('tab-productos');
+            const content = document.getElementById('tab-content');
+            if (!content) return;
+            content.innerHTML = `
+                <h3>Productos</h3>
+                <div style="width: 70%; margin: 20px auto;">
+                    <h4>Análisis de Inventario</h4>
+                    <canvas id="stockChart"></canvas> 
+                    <hr>
+                </div>
+                <div id="product-form" class="admin-panel">
+                    <input id="p_name" placeholder="Nombre" />
+                    <input id="p_price" placeholder="Precio" type="number" step="0.01" />
+                    <input id="p_stock" placeholder="Stock" type="number" />
+                    <label><input id="p_active" type="checkbox" /> Activo</label>
+                    <input id="p_image" placeholder="image_url" />
+                    <input id="p_video" placeholder="video_id" />
+                    <input id="p_description" placeholder="Descripción" />
+                    <button id="create-product" class="btn primary">Crear producto</button>
+                </div>
+                <div id="products-list">
+                    <table id="products-table" border="1" style="width:100%;margin-top:8px;">
+                        <thead><tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Stock</th><th>Activo</th><th>Acciones</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('create-product').addEventListener('click', createProduct);
+            const products = await loadProducts();
+            if(products) renderStockChart(products);
+        }
+
+        async function showUsersTab(){
+            setActiveTab('tab-usuarios');
+            const content = document.getElementById('tab-content');
+            if (!content) return;
+            content.innerHTML = `
+                <h3>Usuarios Registrados</h3>
+                <div id="users-list">
+                    <table id="users-table" border="1" style="width:100%;margin-top:8px;">
+                        <thead><tr><th>ID</th><th>Email</th><th>Nombre</th><th>Admin</th><th>Fecha de Registro</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            `;
+            loadUsers();
+        }
+
+        async function loadUsers(){
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/users`, { credentials: 'include' });
+                if (!res.ok) throw new Error('Error cargando usuarios');
+                const users = await res.json();
+                const tbody = document.querySelector('#users-table tbody');
+                tbody.innerHTML = '';
+                users.forEach(u => {
+                    const tr = document.createElement('tr');
+                    const fecha = new Date(u.created_at).toLocaleDateString('es-ES');
+                    tr.innerHTML = `
+                        <td>${u.user_id}</td>
+                        <td>${escapeHtml(u.email || '')}</td>
+                        <td>${escapeHtml(u.name || '')}</td>
+                        <td>${u.is_admin ? '✓ Sí' : 'No'}</td>
+                        <td>${fecha}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                alert(err.message || 'Error cargando usuarios');
+            }
+        }
+
+        async function loadProducts(){
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/products?all=1`, { credentials: 'include' });
+                if (!res.ok) throw new Error('Error cargando productos');
+                const products = await res.json();
+                const tbody = document.querySelector('#products-table tbody');
+                tbody.innerHTML = '';
+                products.forEach(p => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${p.id}</td>
+                        <td><span class="val name">${escapeHtml(p.name || '')}</span></td>
+                        <td><span class="val price">${p.price}</span></td>
+                        <td><span class="val stock">${p.stock}</span></td>
+                        <td><span class="val is_active">${p.is_active ? 'Sí' : 'No'}</span></td>
+                        <td>
+                            <button class="edit">Editar</button>
+                            <button class="save" style="display:none;">Guardar</button>
+                            <button class="cancel" style="display:none;">Cancelar</button>
+                            <button class="delete">Eliminar</button>
+                        </td>
+                    `;
+                    tr.querySelector('.edit').addEventListener('click', ()=> enableEdit(tr));
+                    tr.querySelector('.save').addEventListener('click', ()=> saveEdit(tr, p.id));
+                    tr.querySelector('.cancel').addEventListener('click', ()=> disableEdit(tr));
+                    tr.querySelector('.delete').addEventListener('click', ()=> deleteProduct(p.id));
+                    tbody.appendChild(tr);
+                });
+                return products;
+            } catch (err) {
+                alert(err.message || 'Error');
+                return null;
+            }
+        }
+        
+        function enableEdit(tr){
+            tr.querySelectorAll('.val').forEach(span => {
+                const txt = span.textContent || '';
+                const cls = span.className.replace('val','').trim();
+                let input;
+                if (cls === 'is_active') {
+                    input = document.createElement('input'); input.type='checkbox'; input.checked = (txt==='Sí');
+                } else if (cls === 'price') {
+                    input = document.createElement('input'); input.type='number'; input.step='0.01'; input.value = txt;
+                } else if (cls === 'stock') {
+                    input = document.createElement('input'); input.type='number'; input.value = txt;
+                } else {
+                    input = document.createElement('input'); input.value = txt;
+                }
+                input.className = 'edit-input '+cls;
+                span.parentNode.replaceChild(input, span);
+            });
+            tr.querySelector('.edit').style.display='none';
+            tr.querySelector('.save').style.display='inline-block';
+            tr.querySelector('.cancel').style.display='inline-block';
+        }
+
+        function disableEdit(tr){
+            tr.querySelectorAll('.edit-input').forEach(inp => {
+                const span = document.createElement('span');
+                span.className = 'val '+(inp.className.replace('edit-input','').trim());
+                if (inp.type === 'checkbox') span.textContent = inp.checked ? 'Sí' : 'No';
+                else span.textContent = inp.value;
+                inp.parentNode.replaceChild(span, inp);
+            });
+            tr.querySelector('.edit').style.display='inline-block';
+            tr.querySelector('.save').style.display='none';
+            tr.querySelector('.cancel').style.display='none';
+        }
+
+        async function saveEdit(tr, id){
+            const name = tr.querySelector('.edit-input.name') ? tr.querySelector('.edit-input.name').value : '';
+            const price = tr.querySelector('.edit-input.price') ? Number(tr.querySelector('.edit-input.price').value) : 0;
+            const stock = tr.querySelector('.edit-input.stock') ? Number(tr.querySelector('.edit-input.stock').value) : 0;
+            const is_active = tr.querySelector('.edit-input.is_active') ? tr.querySelector('.edit-input.is_active').checked : false;
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/products/`+id, {
+                    method: 'PUT',
+                    headers: {'Content-Type':'application/json'},
+                    credentials: 'include',
+                    body: JSON.stringify({ name, price, stock, is_active, description: '', image_url: '', video_id: '' })
+                });
+                if (!res.ok) { const err = await res.json(); throw new Error(err.message || 'Error guardando'); }
+                alert('Producto actualizado');
+                await loadProducts();
+            } catch (err){ alert(err.message || 'Error'); }
+        }
+
+        async function deleteProduct(id){
+            if (!confirm('¿Eliminar producto '+id+'?')) return;
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/products/`+id, { method: 'DELETE', credentials: 'include' });
+                if (!res.ok) throw new Error('Error eliminando');
+                await loadProducts();
+            } catch (err){ alert(err.message || 'Error'); }
+        }
+
+        async function createProduct(){
+            const name = document.getElementById('p_name').value.trim();
+            const price = Number(document.getElementById('p_price').value) || 0;
+            const stock = Number(document.getElementById('p_stock').value) || 0;
+            const is_active = document.getElementById('p_active').checked;
+            const image_url = document.getElementById('p_image').value.trim();
+            const video_id = document.getElementById('p_video').value.trim();
+            const description = document.getElementById('p_description').value.trim();
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/products`, {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    credentials: 'include',
+                    body: JSON.stringify({ name, price, stock, is_active, image_url, video_id, description })
+                });
+                if (!res.ok) throw new Error('Error creando producto');
+                document.getElementById('p_name').value=''; document.getElementById('p_price').value='';
+                document.getElementById('p_stock').value=''; document.getElementById('p_image').value='';
+                document.getElementById('p_video').value=''; document.getElementById('p_description').value='';
+                await loadProducts();
+            } catch (err){ alert(err.message || 'Error'); }
+        }
+
+        function renderStockChart(products) {
+            const ctx = document.getElementById('stockChart');
+            if (!ctx || !products || products.length === 0) return;
+
+            const labels = products.map(p => p.name || `ID: ${p.id}`);
+            const data = products.map(p => p.stock);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Stock Actual',
+                        data: data,
+                        backgroundColor: 'rgba(216, 27, 96, 0.6)',
+                        borderColor: 'rgba(216, 27, 96, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Unidades en Stock' }
+                        }
+                    },
+                    plugins: {
+                        title: { display: true, text: 'Inventario por Producto' }
+                    }
+                }
+            });
+        }
+        
+        function escapeHtml(s){ return String(s || '').replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
+    </script>
+</body>
+</html>

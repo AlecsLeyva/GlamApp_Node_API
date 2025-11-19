@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle del Producto - Glam App</title>
+    <style>
+        /* Cabecera de autenticación */
+    .topbar { display:flex; justify-content:flex-end; gap:12px; max-width:900px; margin:8px auto 0; align-items:center }
+    .topbar a { color:#880e4f; text-decoration:none; font-weight:600 }
+    .topbar .user-name { color:#4a4a4a; margin-right:auto; font-weight:600; display:none }
+
+        body { font-family: 'Open Sans', sans-serif; background:#fff5f8; color:#4a4a4a; margin:0; padding:20px; text-align:center }
+        .card { max-width:900px; margin:30px auto; background:white; border-radius:12px; padding:20px; box-shadow:0 8px 20px rgba(136,14,79,0.12) }
+        img { width:100%; max-height:420px; object-fit:cover; border-radius:8px }
+        h1 { color:#880e4f; font-family:'Playfair Display', serif }
+        .price { color:#d81b60; font-weight:800; font-size:1.4em; margin-top:10px }
+        .desc { margin-top:15px; text-align:left }
+        .actions { margin-top:20px }
+        .btn { display:inline-block; padding:10px 18px; border-radius:8px; text-decoration:none; color:white }
+        .back { background:#888; }
+        .buy { background:#d81b60; margin-left:10px }
+
+        /* Layout específicos */
+        .product-layout { display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap }
+        .product-image-wrapper { flex:0 0 320px; max-width:40% }
+        .product-info { flex:1 1 55%; text-align:left }
+        .separator { margin:20px 0; border:none; border-top:1px solid #f0d3df }
+        .section-title { text-align:left }
+        .tutorial-area { text-align:center }
+        .muted { color:#666 }
+    </style>
+</head>
+<body>
+    <div class="topbar" id="topbar">
+        <span class="user-name" id="user-name"></span>
+        <a href="auth/login.html" id="link-login">Iniciar sesión</a>
+        <a href="auth/register.html" id="link-register">Registro</a>
+    </div>
+    <script src="auth/auth-check.js"></script>
+    <script>
+        // Forzar autenticación antes de mostrar detalles del producto
+        if (typeof requireAuth === 'function') {
+            requireAuth();
+        }
+    </script>
+    <div class="card" id="product-card">
+        <div class="product-layout" id="product-layout-content">
+            <div class="product-image-wrapper">
+                <img id="product-image" src="" alt="Producto">
+            </div>
+            <div class="product-info">
+                <h1 id="product-name">Cargando...</h1>
+                <div class="price" id="product-price">...</div>
+                <div class="desc" id="product-desc"></div>
+
+                <div class="actions">
+                    <a class="btn back" id="cancel-btn" href="ProyectoUni2APIS.html">Cancelar</a>
+                    <a class="btn buy" id="buy-btn" href="#">Comprar</a>
+                </div>
+            </div>
+        </div>
+
+        <hr class="separator">
+
+        <h3 class="section-title">Tutorial de uso</h3>
+        <div id="tutorial-area" class="tutorial-area">
+            <!-- El tutorial se insertará aquí -->
+        </div>
+    </div>
+
+    <script>
+        function getQueryParam(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
+
+        // --- FUNCIÓN PRINCIPAL: Carga Dinámica del Producto ---
+        async function renderProduct(productId) {
+            const productCard = document.getElementById('product-card');
+            
+            if (!productId) {
+                 productCard.innerHTML = '<h2>Error: ID de producto faltante.</h2><p><a href="ProyectoUni2APIS.html">Volver a la tienda</a></p>';
+                 return;
+            }
+
+            try {
+                // Obtener lista de productos y filtrar localmente
+                const response = await fetch('http://localhost:3000/api/products');
+                
+                if (!response.ok) {
+                    throw new Error('Error al obtener lista de productos.');
+                }
+
+                const products = await response.json();
+                const p = products.find(prod => prod.id === productId);
+                
+                if (!p) {
+                    throw new Error('Producto no encontrado en el catálogo.');
+                }
+
+                // 1. Mostrar la información del producto
+                document.getElementById('product-image').src = p.image_url; // Usamos image_url de la BD
+                document.getElementById('product-image').alt = p.name;
+                document.getElementById('product-name').textContent = p.name;
+                document.getElementById('product-price').textContent = '$' + Number(p.price).toFixed(2) + ' MXN';
+                document.getElementById('product-desc').textContent = p.description;
+
+                // 2. Lógica del Carrito
+                document.getElementById('buy-btn').addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const cart = JSON.parse(localStorage.getItem('glamAppCart') || '[]');
+                    
+                    var existing = null;
+                    for (var i = 0; i < cart.length; i++) {
+                        if (cart[i] && String(cart[i].id) === String(p.id)) { existing = cart[i]; break; }
+                    }
+                    if (existing) {
+                        existing.quantity = (existing.quantity || 1) + 1;
+                    } else {
+                        cart.push({
+                            id: p.id,
+                            name: p.name,
+                            price: p.price,
+                            image: p.image_url, 
+                            quantity: 1
+                        });
+                    }
+                    
+                    // Normalización simplificada (para asegurar que las cantidades se suman)
+                    const newCart = cart.reduce((acc, item) => {
+                        const existingItem = acc.find(i => i.id === item.id);
+                        if (existingItem) {
+                            existingItem.quantity += item.quantity || 1;
+                        } else {
+                            acc.push(item);
+                        }
+                        return acc;
+                    }, []);
+
+                    localStorage.setItem('glamAppCart', JSON.stringify(newCart));
+
+                    if (confirm('¡Producto añadido al carrito! ¿Deseas ir al carrito?')) {
+                        window.location.href = 'cart.html';
+                    }
+                });
+
+                // 3. Tutorial YouTube
+                const tutorialArea = document.getElementById('tutorial-area');
+                tutorialArea.innerHTML = '';
+                if (p.video_id && p.video_id.trim() !== '') {
+                    const iframe = document.createElement('iframe');
+                    iframe.width = '100%';
+                    iframe.height = '420';
+                    iframe.src = 'https://www.youtube.com/embed/' + p.video_id;
+                    iframe.title = 'Tutorial de uso';
+                    iframe.frameBorder = '0';
+                    iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+                    iframe.allowFullscreen = true;
+                    tutorialArea.appendChild(iframe);
+                } else {
+                    tutorialArea.innerHTML = '<p class="muted">No hay tutorial disponible para este producto.</p>';
+                }
+
+            } catch (err) {
+                // Si el servidor falló o el producto no existe en BD
+                productCard.innerHTML = `<h2>Producto no encontrado</h2><p>${err.message}</p><p><a href="ProyectoUni2APIS.html">Volver a la tienda</a></p>`;
+            }
+        }
+
+        // --- LÓGICA DE INICIALIZACIÓN ---
+        const id = getQueryParam('product');
+        renderProduct(id);
+    </script>
+    <script>
+        // Mostrar estado de usuario (lectura de localStorage)
+        (function(){
+            const userJson = localStorage.getItem('glamCurrentUser');
+            const userNameEl = document.getElementById('user-name');
+            const loginLink = document.getElementById('link-login');
+            const registerLink = document.getElementById('link-register');
+
+            if (userJson) {
+                try {
+                    const user = JSON.parse(userJson);
+                    userNameEl.textContent = user.name || user.email || '';
+                    userNameEl.style.display = 'block';
+
+                    // Cambiar login hacia acción de cerrar sesión
+                    loginLink.textContent = 'Cerrar sesión';
+                    loginLink.href = '#';
+                    loginLink.addEventListener('click', function(e){
+                        e.preventDefault();
+                        fetch('http://localhost:3000/api/logout', { method: 'POST', credentials: 'include' }).finally(() => {
+                            localStorage.removeItem('glamCurrentUser');
+                            window.location.reload();
+                        });
+                    });
+
+                    // Ocultar registro cuando el usuario está logueado
+                    registerLink.style.display = 'none';
+                } catch (err) {
+                    console.warn('Error parsing glamCurrentUser', err);
+                }
+            }
+        })();
+    </script>
+</body>
+</html>

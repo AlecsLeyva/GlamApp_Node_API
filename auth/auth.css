@@ -1,0 +1,210 @@
+:root{
+    /* Paleta de Colores para Maquillaje */
+    --primary-red: #C62828;  /* Rojo Intenso y Clásico */
+    --accent-pink: #FF4081;  /* Rosa Vibrante (Magenta) */
+    --text-dark: #333333;    /* Texto Principal */
+    --text-muted: #888888;   /* Gris Suave */
+    --bg-light: #FFFFFF;     /* Blanco Puro */
+    --bg-pink-soft: #FCE4EC; /* Fondo Rosa muy Suave */
+    --shadow-color: rgba(204, 0, 80, 0.15); /* Sombra con toque rosa */
+}
+
+/* Estilos Globales */
+*{
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* Estilos del BODY (Fondo Animado) */
+body{
+    font-family: 'Georgia', serif; /* Tipo de letra más elegante */
+    
+    /* CONFIGURACIÓN DEL FONDO ANIMADO */
+    background-image: url('fondo-animado.gif'); /* Asegúrate que 'fondo-animado.gif' esté en la misma carpeta que auth.css */
+    background-repeat: no-repeat;
+    background-size: cover;         
+    background-position: center center;
+    background-attachment: fixed;   
+    background-color: var(--bg-pink-soft); /* Color de respaldo Rosa Suave */
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    padding: 16px;
+}
+
+/* Tarjeta de Autenticación (Login/Register) */
+.auth-card{
+    background: var(--bg-light);
+    padding: 28px;
+    border-radius: 15px; /* Bordes más suaves */
+    /* Sombra más elegante y marcada */
+    box-shadow: 0 10px 30px var(--shadow-color); 
+    width: 100%;
+    max-width: 400px;
+    text-align: left;
+}
+
+/* Títulos y Texto */
+.auth-card h1{
+    color: var(--primary-red); /* Título en Rojo Clásico */
+    margin: 0 0 16px 0;
+    font-size: 1.8em;
+    text-align: center;
+    letter-spacing: 1px;
+}
+.auth-card label{
+    display: block;
+    margin-top: 15px;
+    font-size: 0.9em;
+    color: var(--text-dark); /* Etiquetas en Gris Oscuro */
+    font-weight: bold;
+}
+.muted{
+    color: var(--text-muted); /* Texto informativo en Gris Suave */
+    font-size: 0.9em;
+    margin-top: 12px;
+    text-align: center;
+}
+a{
+    color: var(--accent-pink); /* Enlaces en Rosa Vibrante */
+    text-decoration: none;
+    font-weight: 600;
+}
+a:hover {
+    text-decoration: underline;
+}
+
+/* Campos de Input */
+.auth-card input{
+    width: 100%;
+    padding: 12px;
+    margin-top: 8px;
+    border-radius: 8px;
+    border: 1px solid #FFCDD2; /* Borde rosa claro */
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+.auth-card input:focus {
+    border-color: var(--accent-pink);
+    box-shadow: 0 0 5px rgba(255, 64, 129, 0.4); /* Sombra de enfoque rosa */
+    outline: none;
+}
+
+/* Botones y Acciones */
+.auth-card .btn{
+    display: block; /* Ocupa todo el ancho */
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: none; /* Eliminar el borde del botón */
+    margin-top: 25px;
+    color: var(--bg-light);
+    text-decoration: none;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1.1em;
+    letter-spacing: 0.5px;
+    transition: background-color 0.3s;
+}
+.primary{
+    background: var(--accent-pink); /* Botón principal en Rosa Vibrante */
+}
+.primary:hover {
+    background: #ff79b0; /* Un poco más claro al pasar el ratón */
+}
+hr {
+    border: none;
+    border-top: 1px solid #F8BBD0; /* Línea divisoria en rosa muy claro */
+    margin: 25px 0;
+}
+
+/* Wrapper para botones de social auth (Google) */
+.g-signin-wrapper { 
+    text-align: center; 
+    margin-top: 12px;
+    margin-bottom: 20px;
+}
+.g-signin-wrapper #g_id_button { 
+    display: inline-block;
+}
+
+/* ==============================================
+   Estilos del Panel de Administración (admin.html)
+   ============================================== */
+.admin-panel { 
+    background: var(--bg-light); 
+    border-radius: 12px; 
+    padding: 25px; 
+    margin-top: 18px; 
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05); /* Sombra más sutil */
+    width: 100%;
+}
+.admin-header { 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    gap: 12px;
+}
+.admin-tabs { 
+    display: flex; 
+    gap: 10px; 
+    margin-top: 16px; 
+    flex-wrap: wrap;
+}
+.admin-tab { 
+    padding: 8px 15px; 
+    border-radius: 20px; /* Píldora más redondeada */
+    background: #FFEBEE; /* Fondo Rosa muy claro */
+    color: var(--primary-red); 
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 0.95em;
+    font-weight: 500;
+}
+.admin-tab:hover:not(.active) {
+    background: #FFCDD2;
+}
+.admin-tab.active { 
+    background: var(--primary-red); /* Tab activa en Rojo */
+    color: white;
+    box-shadow: 0 2px 5px rgba(198, 40, 40, 0.4);
+}
+.admin-content { 
+    margin-top: 20px;
+}
+.admin-row { 
+    display: flex; 
+    gap: 15px; 
+    margin-bottom: 15px; 
+    align-items: center; 
+    flex-wrap: wrap;
+}
+.admin-row label { 
+    min-width: 140px; 
+    color: var(--text-dark);
+    font-weight: normal;
+    margin: 0;
+}
+.admin-row input, .admin-row select { 
+    flex: 1; 
+    min-width: 150px;
+    padding: 10px; 
+    border: 1px solid #FFCDD2; 
+    border-radius: 8px;
+    margin: 0; 
+}
+.admin-actions { 
+    margin-top: 20px; 
+    display: flex; 
+    gap: 10px;
+    justify-content: flex-end; /* Alinea los botones a la derecha */
+}
+.admin-actions .btn { 
+    padding: 10px 18px; 
+    border-radius: 8px;
+    width: auto;
+    margin: 0; /* Anula el margin-top de .auth-card .btn */
+}
+
