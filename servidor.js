@@ -1,10 +1,10 @@
 // 1. CARGA DE VARIABLES DE ENTORNO
-require('dotenv').config({ path: './credenciales.env' }); 
+require('dotenv').config({ path: './credenciales.env' }); 
 
 // 2. IMPORTACIÓN DE LIBRERÍAS
 const express = require('express');
-const twilio = require('twilio'); 
-const cors = require('cors'); 
+const twilio = require('twilio'); 
+const cors = require('cors'); 
 const mysql = require('mysql2/promise');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
@@ -15,6 +15,7 @@ const app = express();
 
 // Configuración de MySQL
 const dbConfig = {
+    // Usar la variable de entorno 'MYSQL_URL' para Render si existe, o las individuales
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
@@ -38,13 +39,24 @@ let pool;
     }
 })();
 
-// CORRECCIÓN CORS: Especificamos los orígenes locales para mejor seguridad con credenciales
-app.use(cors({ 
+// 🚨 CORRECCIÓN CORS: Permitir localhost Y el dominio de Vercel 🚨
+const ALLOWED_ORIGINS = [
+    'http://localhost:80', // Puerto 80 default
+    'http://localhost:3000', // Puerto de desarrollo Node
+    'https://glam-app-node-dwhqc2zror-alecsdesus-projects.vercel.app', // Dominio de Vercel
+    // Añadir otras combinaciones de localhost si las usas (ej: http://127.0.0.1:80)
+];
+
+app.use(cors({ 
     origin: (origin, callback) => {
-        // Permitir cualquier localhost/127.0.0.1 en cualquier puerto para desarrollo local
-        if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        // Permitir peticiones sin origen (como clientes REST locales o peticiones directas)
+        if (!origin) return callback(null, true); 
+        
+        // Comprobar si el origen está en la lista de permitidos o es localhost
+        if (ALLOWED_ORIGINS.includes(origin) || origin.includes('localhost') || origin.includes('127.0.0.1')) {
             callback(null, true);
         } else {
+            console.error(`CORS Blocked: ${origin}`);
             callback(new Error('Not allowed by CORS'));
         }
     },
@@ -53,6 +65,7 @@ app.use(cors({
     allowedHeaders: ['Content-Type']
 }));
 
+app.set('trust proxy', 1); // Necesario para que Render maneje las cookies correctamente (proxies)
 app.use(express.json()); // Middleware para parsear el cuerpo JSON de la solicitud
 
 // Sesiones (para login simple)
@@ -60,11 +73,12 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'dev-secret-change',
     resave: false,
     saveUninitialized: true,
-    cookie: { 
-        secure: false,           // HTTP, no HTTPS en desarrollo
-        httpOnly: true,          // No accesible desde JavaScript
-        sameSite: 'lax',         // Permite cookies en requests entre sitios con credenciales
-        maxAge: 24 * 60 * 60 * 1000  // 24 horas
+    cookie: { 
+        // 🚨 CONFIGURACIÓN DE COOKIES PARA DESPLIEGUE EN RENDER
+        secure: process.env.NODE_ENV === 'production', // true en producción (https), false en local (http)
+        httpOnly: true,          
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' es NECESARIO para CORS cross-site en producción
+        maxAge: 24 * 60 * 60 * 1000  
     }
 }));
 
@@ -96,11 +110,11 @@ function requireAdmin(req, res, next){
 
 
 // --- 4. ENDPOINT PARA EL ENVÍO DE SMS (Twilio) ---
-const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER; 
+const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER; 
 const client = new twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 app.post('/enviar-sms', async (req, res) => {
-    const { to, body } = req.body; 
+    const { to, body } = req.body; 
 
     if (!to || !body) {
         return res.status(400).json({ message: 'Faltan el número o el mensaje.' });
@@ -116,10 +130,10 @@ app.post('/enviar-sms', async (req, res) => {
             from: twilioPhoneNumber,
             body: body
         });
-        
+         
         res.json({ message: '✅ SMS enviado con éxito!' });
     } catch (error) {
-        console.error("Error de Twilio (Revisar Credenciales/Número):", error); 
+        console.error("Error de Twilio (Revisar Credenciales/Número):", error); 
         res.status(500).json({ message: '❌ Error al comunicarse con Twilio. Revisa la terminal para detalles.' });
     }
 });
@@ -151,48 +165,49 @@ app.post('/api/login', async (req, res) => {
         const [rows] = await pool.query('SELECT user_id AS id, name, email, password, is_admin FROM users WHERE email = ? LIMIT 1', [email]);
         const user = rows && rows[0];
         if (!user) return res.status(401).json({ message: 'Credenciales inválidas' });
-        
-        console.log('Usuario encontrado:', { 
-            id: user.id, 
-            email: user.email, 
-            is_admin_raw: user.is_admin, 
+         
+        console.log('Usuario encontrado:', { 
+            id: user.id, 
+            email: user.email, 
+            is_admin_raw: user.is_admin, 
             is_admin_type: typeof user.is_admin,
             is_admin_JSON: JSON.stringify(user.is_admin),
             password_hash: user.password ? user.password.substring(0, 20) + '...' : 'NULL'
         });
-        
+         
         const ok = await bcrypt.compare(password, user.password);
         if (!ok) {
             console.log('Contraseña incorrecta para:', email);
             return res.status(401).json({ message: 'Credenciales inválidas' });
         }
-        
+         
         console.log('LOGIN exitoso:', email, 'is_admin en BD:', user.is_admin, 'tipo:', typeof user.is_admin);
-        
+         
         // Convertir is_admin: si es NULL/undefined/0, es false; si es 1, es true
         const isAdminValue = user.is_admin ? 1 : 0;
-        
+         
         console.log('Después de conversión - isAdminValue:', isAdminValue);
-        
+         
         // Guardar en sesión
         req.session.userId = user.id;
         req.session.userName = user.name;
         req.session.isAdmin = isAdminValue;
 
         console.log('Sesión guardada - userId:', user.id, 'userName:', user.name, 'isAdmin:', isAdminValue);
-        
+         
         // *********************************************************************************
         // CAMBIO: Incluir la redirección en la respuesta si es administrador
-        const responseBody = { 
-            id: user.id, 
-            name: user.name, 
-            email: user.email, 
-            is_admin: isAdminValue === 1 
+        const responseBody = { 
+            id: user.id, 
+            name: user.name, 
+            email: user.email, 
+            is_admin: isAdminValue === 1 
         };
 
-        if (isAdminValue === 1) {
-            responseBody.redirect = 'admin.html';
-        }
+        // El frontend ya maneja la redirección a admin.html
+        // if (isAdminValue === 1) {
+        //     responseBody.redirect = 'admin.html';
+        // }
 
         res.json(responseBody);
         // *********************************************************************************
@@ -275,8 +290,8 @@ app.post('/api/products', requireSession, async (req, res) => {
     try {
         // Generamos un identificador único basado en el nombre y timestamp
         const rawId = (name || 'prod').toString().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
-        const id = rawId.substring(0, 30) + '-' + Date.now(); 
-        
+        const id = rawId.substring(0, 30) + '-' + Date.now(); 
+         
         await pool.query('INSERT INTO products (id, name, price, description, image_url, video_id, stock, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
             [id, name, price || 0, description || '', image_url || '', video_id || '', stock || 0, is_active ? 1 : 0]);
         res.status(201).json({ id, message: 'Producto creado con éxito.' });
@@ -291,14 +306,14 @@ app.post('/api/products', requireSession, async (req, res) => {
 app.put('/api/products/:id', requireSession, async (req, res) => {
     const id = req.params.id;
     const { name, price, description, image_url, video_id, stock, is_active } = req.body || {};
-    
+     
     // El frontend solo envía name, price, stock, is_active, pero incluimos todos los campos para ser seguros
     try {
         const result = await pool.query('UPDATE products SET name=?, price=?, description=?, image_url=?, video_id=?, stock=?, is_active=? WHERE id=?',
             [name, price || 0, description || '', image_url || '', video_id || '', stock || 0, is_active ? 1 : 0, id]);
-        
+         
         if (result[0].affectedRows === 0) return res.status(404).json({ message: 'Producto no encontrado para actualizar.' });
-        
+         
         res.json({ message: 'Producto actualizado con éxito.' });
     } catch (err) {
         console.error('update product error', err);
@@ -321,8 +336,9 @@ app.delete('/api/products/:id', requireSession, async (req, res) => {
 
 
 // 8. INICIO DEL SERVIDOR
-const PORT = 3000;
+// 🚨 CAMBIO: Usar PORT del entorno para Render
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Servidor escuchando en http://localhost:${PORT}`);
+    console.log(`Servidor escuchando en puerto: ${PORT}`);
     console.log(`Conectado a MySQL: ${process.env.DB_NAME}`);
 });
