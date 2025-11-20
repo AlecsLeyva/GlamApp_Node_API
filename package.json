@@ -4,7 +4,7 @@
   "description": "API para la tienda de maquillaje Glam App",
   "main": "servidor.js",
   "scripts": {
-    "start": "node servidor.js"  <--- 🚨 AÑADE ESTA LÍNEA
+    "start": "node servidor.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -13,7 +13,7 @@
     "express": "^4.19.2",
     "express-session": "^1.18.0",
     "mysql2": "^3.9.7",
-    "twilio": "^5.0.4"
+    "twilio": "^5.0.4",  
     "mongoose": "^8.4.1"
   }
 }
