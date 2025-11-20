@@ -390,5 +390,5 @@ app.delete('/api/products/:id', requireSession, async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor escuchando en puerto: ${PORT}`);
-    console.log(`Conectado a MongoDB: ${mongodb+srv://ServicioLeyva:ServicioLeyva@servicioleyva.a8altxu.mongodb.net/}`);
+    console.log(`Conectado a MongoDB: ${PORT}`);
 });
