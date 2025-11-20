@@ -14,5 +14,6 @@
     "express-session": "^1.18.0",
     "mysql2": "^3.9.7",
     "twilio": "^5.0.4"
+    "mongoose": "^8.4.1"
   }
 }
