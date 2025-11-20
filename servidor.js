@@ -7,8 +7,6 @@ const twilio = require('twilio');
 const cors = require('cors');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
-
-// 🚨 CAMBIO CLAVE: Reemplazar MySQL por Mongoose
 const mongoose = require('mongoose'); // Usaremos Mongoose para la conexión y modelos
 
 const app = express();
@@ -18,9 +16,8 @@ const app = express();
 // ----------------------------------------------------
 
 // 🚨 CONEXIÓN A MONGODB
-// Asegúrate de definir MONGO_URI en tus variables de entorno (ej. en Render o credenciales.env)
-// MONGO_URI=mongodb://localhost:27017/glam_app
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/glam_app1';
+// En Render, MONGO_URI debe ser la cadena de Atlas.
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/glam_app';
 mongoose.connect(MONGO_URI)
     .then(() => console.log('Conexión a MongoDB OK'))
     .catch(err => console.error('Error conectando a MongoDB:', err.message || err));
@@ -30,23 +27,20 @@ mongoose.connect(MONGO_URI)
 
 // --- Modelo User ---
 const UserSchema = new mongoose.Schema({
-    // user_id de SQL es _id de MongoDB
-    email: { type: String, required: true, unique: true }, // UNIQUE replicado
+    email: { type: String, required: true, unique: true }, 
     name: { type: String, required: true },
-    password: { type: String, required: true, select: false }, // No enviar el hash por defecto
+    password: { type: String, required: true, select: false }, 
     picture_url: String,
-    is_admin: { type: Boolean, default: false }, // BOOLEAN en Mongoose
-    created_at: { type: Date, default: Date.now } // TIMESTAMP a Date
+    is_admin: { type: Boolean, default: false }, 
+    created_at: { type: Date, default: Date.now } 
 });
 const User = mongoose.model('User', UserSchema);
 
 // --- Modelo Product ---
 const ProductSchema = new mongoose.Schema({
-    // id de SQL se mapea a _id si lo quieres mantener, o a un campo 'id'
-    // Para simplificar, asumiremos que Mongoose genera el _id (ObjectId)
-    id_sql: { type: String, required: true, unique: true }, // Almacenamos el ID de SQL como referencia
+    id_sql: { type: String, required: true, unique: true }, 
     name: { type: String, required: true },
-    price: { type: Number, required: true }, // DECIMAL a Number (Double)
+    price: { type: Number, required: true }, 
     description: String,
     image_url: String,
     video_id: String,
@@ -55,9 +49,6 @@ const ProductSchema = new mongoose.Schema({
 });
 const Product = mongoose.model('Product', ProductSchema);
 
-
-// El resto del código de Middlewares (CORS, Express, Sesiones, Logging) se mantiene igual
-// ... (Aquí iría la configuración de CORS y Sesiones exactamente igual a tu original) ...
 
 const VERCEL_FRONTEND = process.env.FRONTEND_URL;
 const ALLOWED_ORIGINS = [
@@ -118,18 +109,27 @@ function requireAuth(req, res, next){
 }
 const requireSession = requireAuth;
 function requireAdmin(req, res, next){
-    // Comprueba que exista sesión Y que la variable de sesión isAdmin sea verdadera (true)
     if (req.session && req.session.userId && req.session.isAdmin) return next();
     return res.status(403).json({ message: 'No autorizado. Se requiere acceso de administrador.' });
 }
 
+// ----------------------------------------------------------------------------------
+// 🚨 CORRECCIÓN 1: ENDPOINT RAÍZ PARA EVITAR "Cannot GET /"
+// ----------------------------------------------------------------------------------
 
-// --- 4. ENDPOINT PARA EL ENVÍO DE SMS (Twilio) --- (Se mantiene igual, no usa DB)
+app.get('/', (req, res) => {
+    res.status(200).json({ 
+        message: '✅ Glam App API está activa y conectada a MongoDB.',
+        version: '1.0',
+        check_endpoints: ['/api/products', '/api/login']
+    });
+});
+
+// --- 4. ENDPOINT PARA EL ENVÍO DE SMS (Twilio) --- 
 const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER; 
 const client = new twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 app.post('/enviar-sms', async (req, res) => {
-    // ... (Lógica de Twilio se mantiene igual) ...
     const { to, body } = req.body; 
     if (!to || !body) return res.status(400).json({ message: 'Faltan el número o el mensaje.' });
     try {
@@ -153,20 +153,16 @@ app.post('/api/register', async (req, res) => {
     if (!name || !email || !password) return res.status(400).json({ message: 'Faltan campos.' });
     try {
         const hash = await bcrypt.hash(password, 10);
-        // 🚨 CAMBIO: Usar Mongoose para crear un nuevo documento
         const newUser = new User({ 
             name, 
             email, 
-            password: hash, // Se guarda en el campo 'password'
+            password: hash, 
             is_admin: false 
         });
-        const result = await newUser.save(); // Guarda el documento
-        
-        // El ID en MongoDB es _id
+        const result = await newUser.save(); 
         res.json({ id: result._id, name, email, message: 'Registro exitoso. Inicie sesión.' });
     } catch (err) {
         console.error('register error', err);
-        // El código 11000 es el error de duplicado de MongoDB
         if (err && err.code === 11000) return res.status(409).json({ message: 'Usuario ya existe' }); 
         res.status(500).json({ message: 'Error en el servidor' });
     }
@@ -177,7 +173,6 @@ app.post('/api/login', async (req, res) => {
     const { email, password } = req.body || {};
     if (!email || !password) return res.status(400).json({ message: 'Faltan campos.' });
     try {
-        // 🚨 CAMBIO: Usar User.findOne para buscar el documento por email, incluyendo el campo 'password'
         const user = await User.findOne({ email }).select('+password');
         
         if (!user) return res.status(401).json({ message: 'Credenciales inválidas' });
@@ -190,10 +185,9 @@ app.post('/api/login', async (req, res) => {
         
         console.log('LOGIN exitoso:', email, 'is_admin en BD:', user.is_admin);
         
-        // Guardar en sesión: user._id es el equivalente a user_id
         req.session.userId = user._id.toString();
         req.session.userName = user.name;
-        req.session.isAdmin = user.is_admin; // El valor ya es booleano
+        req.session.isAdmin = user.is_admin; 
         
         console.log('Sesión guardada - userId:', user._id, 'userName:', user.name, 'isAdmin:', user.is_admin);
         
@@ -220,22 +214,18 @@ app.post('/api/logout', (req, res) => {
 });
 
 app.get('/api/me', (req, res) => {
-    // Se mantiene igual, usa la sesión
     if (req.session && req.session.userId) {
         return res.json({ id: req.session.userId, name: req.session.userName, is_admin: !!req.session.isAdmin });
     }
     return res.status(401).json({ message: 'No autenticado' });
 });
 
-// GET /api/users (Listar usuarios - ADAPTADA A MONGODB)
 app.get('/api/users', async (req, res) => {
     try {
-        // 🚨 CAMBIO: Usar User.find y select para obtener los campos deseados
         const users = await User.find().select('id email name is_admin created_at').sort({ created_at: -1 });
         
-        // Mongoose usa 'id' como alias de '_id' automáticamente, lo cual es útil
         const formattedUsers = users.map(u => ({
-            user_id: u.id, // Mapeamos 'id' de Mongoose a 'user_id' para consistencia del frontend
+            user_id: u.id, 
             email: u.email,
             name: u.name,
             is_admin: u.is_admin,
@@ -252,22 +242,19 @@ app.get('/api/users', async (req, res) => {
 
 // -------------------- API: Productos (CRUD - ADAPTADA A MONGODB) --------------------
 
-// GET /api/products (Listar todos)
 app.get('/api/products', async (req, res) => {
     try {
         const showAll = req.query.all === '1';
-        let filter = {}; // Filtro vacío (SELECT * from...)
+        let filter = {};
 
-        // 🚨 CAMBIO: Construir el filtro para find()
         if (!showAll) {
             filter = { is_active: true, stock: { $gt: 0 } };
         }
         
         const products = await Product.find(filter).sort('name');
         
-        // Mapear los resultados para usar 'id' en lugar de '_id' si es necesario para el frontend
         const formattedProducts = products.map(p => ({
-             id: p.id_sql, // Usar el campo id_sql que almacena el ID original
+             id: p.id_sql, 
              name: p.name,
              price: p.price,
              description: p.description,
@@ -284,16 +271,13 @@ app.get('/api/products', async (req, res) => {
     }
 });
 
-// GET /api/products/:id (Obtener detalle)
 app.get('/api/products/:id', async (req, res) => {
     const id = req.params.id;
     try {
-        // 🚨 CAMBIO: Buscar por el campo id_sql que contiene el ID de producto original
         const product = await Product.findOne({ id_sql: id });
         
         if (!product) return res.status(404).json({ message: 'Producto no encontrado' });
         
-        // Mapear el resultado
         res.json({
              id: product.id_sql,
              name: product.name,
@@ -310,15 +294,12 @@ app.get('/api/products/:id', async (req, res) => {
     }
 });
 
-// POST /api/products (Crear)
 app.post('/api/products', requireSession, async (req, res) => {
     const { name, price, description, image_url, video_id, stock, is_active } = req.body || {};
     try {
-        // Generamos el identificador original (id_sql) para mantener la compatibilidad
         const rawId = (name || 'prod').toString().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
         const id_sql = rawId.substring(0, 30) + '-' + Date.now();
         
-        // 🚨 CAMBIO: Usar Mongoose para crear un nuevo documento
         const newProduct = new Product({
             id_sql,
             name,
@@ -327,25 +308,22 @@ app.post('/api/products', requireSession, async (req, res) => {
             image_url: image_url || '',
             video_id: video_id || '',
             stock: stock || 0,
-            is_active: is_active ? true : false // Se espera un booleano en Mongoose
+            is_active: is_active ? true : false
         });
         
         await newProduct.save();
         res.status(201).json({ id: id_sql, message: 'Producto creado con éxito.' });
     } catch (err) {
         console.error('create product error', err);
-        // Error de duplicado 11000
         if (err && err.code === 11000) return res.status(409).json({ message: 'Error: El ID generado ya existe.' });
         res.status(500).json({ message: 'Error en el servidor al crear producto' });
     }
 });
 
-// PUT /api/products/:id (Actualizar)
 app.put('/api/products/:id', requireSession, async (req, res) => {
     const id = req.params.id;
     const { name, price, description, image_url, video_id, stock, is_active } = req.body || {};
     
-    // 🚨 CAMBIO: Usar findOneAndUpdate para buscar por id_sql y actualizar
     const updateFields = {
         name,
         price: price || 0,
@@ -357,7 +335,6 @@ app.put('/api/products/:id', requireSession, async (req, res) => {
     };
 
     try {
-        // Buscar por id_sql y actualizar (new: true retorna el documento actualizado)
         const product = await Product.findOneAndUpdate({ id_sql: id }, updateFields, { new: true });
         
         if (!product) return res.status(404).json({ message: 'Producto no encontrado para actualizar.' });
@@ -369,11 +346,9 @@ app.put('/api/products/:id', requireSession, async (req, res) => {
     }
 });
 
-// DELETE /api/products/:id (Eliminar)
 app.delete('/api/products/:id', requireSession, async (req, res) => {
     const id = req.params.id;
     try {
-        // 🚨 CAMBIO: Usar findOneAndDelete para buscar y eliminar
         const result = await Product.findOneAndDelete({ id_sql: id });
         
         if (!result) return res.status(404).json({ message: 'Producto no encontrado para eliminar.' });
@@ -390,5 +365,6 @@ app.delete('/api/products/:id', requireSession, async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor escuchando en puerto: ${PORT}`);
-    console.log(`Conectado a MongoDB: ${PORT}`);
+    // 🚨 CORRECCIÓN 2: Mostrar el estado real de la conexión a MongoDB
+    console.log(`Conectado a MongoDB OK, usando URI: ${process.env.MONGO_URI ? 'Definida' : 'URI no definida (Usando Default)'}`);
 });
